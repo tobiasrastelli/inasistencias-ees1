@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Inasistencias Docentes — EES N°1</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f7; color: #1c1c1e; }
+  .app { max-width: 480px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+  .header { background: #fff; padding: 12px 16px 10px; border-bottom: 1px solid #e5e5ea; position: sticky; top: 0; z-index: 100; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .app-title { font-size: 17px; font-weight: 600; color: #1c1c1e; }
+  .app-sub { font-size: 12px; color: #8e8e93; margin-top: 1px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #34c759; flex-shrink: 0; transition: background 0.3s; }
+  .sync-dot.syncing { background: #ff9500; animation: pulse 1s infinite; }
+  .sync-dot.error { background: #ff3b30; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .nav-tabs { display: flex; background: #f2f2f7; border-radius: 9px; padding: 2px; gap: 2px; }
+  .tab { flex: 1; padding: 7px 6px; border-radius: 7px; border: none; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: #8e8e93; transition: all 0.15s; }
+  .tab.active { background: #fff; color: #007aff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .controls { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .date-input { flex: 1; padding: 7px 10px; border: 1px solid #e5e5ea; border-radius: 9px; font-size: 14px; background: #f9f9f9; color: #1c1c1e; }
+  .turno-tabs { display: flex; background: #f2f2f7; border-radius: 9px; padding: 2px; gap: 2px; flex-shrink: 0; }
+  .turno-tab { padding: 6px 10px; border-radius: 7px; border: none; background: transparent; font-size: 12px; font-weight: 500; cursor: pointer; color: #8e8e93; white-space: nowrap; }
+  .turno-tab.active { background: #fff; color: #007aff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .content { flex: 1; padding: 12px 12px 80px; }
+  .section-label { font-size: 12px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 4px 8px; }
+  .div-list { display: flex; flex-direction: column; gap: 8px; }
+  .div-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .div-header { display: flex; align-items: center; padding: 12px 14px; cursor: pointer; user-select: none; gap: 10px; }
+  .div-name { font-size: 15px; font-weight: 600; color: #1c1c1e; flex: 1; }
+  .abs-pill { font-size: 12px; font-weight: 600; border-radius: 20px; padding: 3px 10px; background: #f2f2f7; color: #8e8e93; transition: all 0.2s; }
+  .abs-pill.has-abs { background: #ffebeb; color: #ff3b30; }
+  .chevron-icon { color: #c7c7cc; font-size: 12px; transition: transform 0.2s; }
+  .chevron-icon.open { transform: rotate(180deg); }
+  .div-body { display: none; border-top: 1px solid #f2f2f7; }
+  .div-body.open { display: block; }
+  .prof-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #f2f2f7; }
+  .prof-row:last-child { border-bottom: none; }
+  .prof-info { flex: 1; min-width: 0; }
+  .prof-name { font-size: 14px; font-weight: 500; color: #1c1c1e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prof-mat { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+  .toggle-btn { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid #e5e5ea; background: #f9f9f9; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; transition: all 0.15s; }
+  .toggle-btn.ausente { background: #fff0f0; border-color: #ffb3b3; }
+  .toggle-btn.presente { background: #f0fff4; border-color: #86efac; }
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e5e5ea; padding: 10px 16px; display: flex; gap: 8px; max-width: 480px; margin: 0 auto; z-index: 99; }
+  .btn-save { flex: 1; padding: 13px; background: #007aff; color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .btn-save:active { opacity: 0.85; }
+  .btn-cancel { padding: 13px 16px; background: #f2f2f7; border: none; border-radius: 12px; font-size: 15px; cursor: pointer; color: #8e8e93; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .stat-card { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .stat-num { font-size: 28px; font-weight: 700; color: #1c1c1e; line-height: 1; }
+  .stat-lbl { font-size: 12px; color: #8e8e93; margin-top: 4px; }
+  .mes-filter { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
+  .mes-filter::-webkit-scrollbar { display: none; }
+  .mes-btn { padding: 6px 14px; border-radius: 20px; border: 1.5px solid #e5e5ea; background: #fff; font-size: 13px; font-weight: 500; cursor: pointer; color: #8e8e93; white-space: nowrap; flex-shrink: 0; }
+  .mes-btn.active { background: #007aff; border-color: #007aff; color: #fff; }
+  .turno-filter { display: flex; gap: 6px; margin-bottom: 12px; }
+  .turno-filter .mes-btn { flex: 1; text-align: center; }
+  .ranking { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .rank-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid #f2f2f7; }
+  .rank-row:last-child { border-bottom: none; }
+  .rank-pos { font-size: 13px; font-weight: 700; color: #c7c7cc; min-width: 22px; }
+  .rank-pos.top { color: #ff9500; }
+  .rank-name { flex: 1; font-size: 13px; font-weight: 500; color: #1c1c1e; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank-badges { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+  .badge-total { font-size: 11px; font-weight: 600; background: #ffebeb; color: #ff3b30; border-radius: 20px; padding: 3px 8px; }
+  .empty { text-align: center; padding: 40px 20px; color: #8e8e93; font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 8px; }
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1c1c1e; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap; z-index: 9999; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .loading { text-align: center; padding: 40px; color: #8e8e93; font-size: 14px; }
+  .spinner { width: 24px; height: 24px; border: 2px solid #e5e5ea; border-top-color: #007aff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="app-title">Inasistencias docentes</div>
+        <div class="app-sub">EES N°1 — 2026</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="sync-dot" id="sync-dot"></div>
+        <div class="nav-tabs">
+          <button class="tab active" onclick="setView('registro')">Registro</button>
+          <button class="tab" onclick="setView('stats')">Estadísticas</button>
+        </div>
+      </div>
+    </div>
+    <div class="controls" id="header-controls">
+      <input type="date" class="date-input" id="fecha" onchange="renderDivList()">
+      <div class="turno-tabs">
+        <button class="turno-tab active" onclick="setTurno('tarde')" id="tt-tarde">Tarde</button>
+        <button class="turno-tab" onclick="setTurno('manana')" id="tt-manana">Mañana</button>
+      </div>
+    </div>
+  </div>
+  <div class="content" id="content">
+    <div class="loading"><div class="spinner"></div>Cargando datos...</div>
+  </div>
+  <div class="bottom-bar" id="bottom-bar" style="display:none">
+    <button class="btn-cancel" onclick="cancelar()">Cancelar</button>
+    <button class="btn-save" onclick="guardar()">Guardar parte del día</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// ID DE NPOINT — ya configurado
+// ══════════════════════════════════════════
+const NPOINT_ID = 'fcc326f6b74778de8981';
+const API_URL = `https://api.npoint.io/${NPOINT_ID}`;
+
+const DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+const horariosTarde = {
+  "1° 1ra": [
+    {mat:"CS NAT",prof:"Elortegui, J",dias:[0,1,2,3]},
+    {mat:"AMC",prof:"Rincon/Mendizabal",dias:[0,4]},
+    {mat:"IGS",prof:"Guzman, Gimena",dias:[0,3]},
+    {mat:"PLG",prof:"Giles, A",dias:[1,3,4]},
+    {mat:"CS SOC",prof:"Bessa, F",dias:[0,1,2,3]},
+    {mat:"MTM",prof:"Masson/Gonzalez",dias:[2,3,4]},
+    {mat:"CDC",prof:"Wagner, C",dias:[1,4]},
+    {mat:"EFI",prof:"Romagnoli, W",dias:[0]},
+  ],
+  "1° 2da": [
+    {mat:"PLG",prof:"Castro, Natalia",dias:[0,2]},
+    {mat:"CCD",prof:"Wagner, Carolina",dias:[1]},
+    {mat:"IGS",prof:"Guzman, Gimena",dias:[2,3]},
+    {mat:"CS NAT",prof:"Viera, J",dias:[1,3,4]},
+    {mat:"CS SOC",prof:"Lamique, J",dias:[3,4]},
+    {mat:"MTM",prof:"Sentenac/Errobidart",dias:[0,2,4]},
+    {mat:"AMC",prof:"Rincon/Rosario",dias:[0,2]},
+    {mat:"GGF",prof:"Lamique, Juan",dias:[1]},
+    {mat:"EFC",prof:"De La Fuente",dias:[0]},
+  ],
+  "1° 3ra": [
+    {mat:"MTM",prof:"Perez, M",dias:[0,1,2,4]},
+    {mat:"CDC",prof:"Castañares/Zurita",dias:[0,1]},
+    {mat:"AMC",prof:"Sabadini, M",dias:[2,3]},
+    {mat:"IGS",prof:"Baños/Acosta",dias:[3,4]},
+    {mat:"PLG",prof:"Belacin, M",dias:[2,3]},
+    {mat:"LIT",prof:"Belacin, Mariangeles",dias:[1]},
+    {mat:"CS NAT",prof:"Lurbe, L",dias:[0,1,2]},
+    {mat:"CS SOC",prof:"Castro, Mariana",dias:[1,3,4]},
+  ],
+  "2° 1ra": [
+    {mat:"FQA",prof:"Lurbe, L",dias:[0,2]},
+    {mat:"IGS",prof:"Guzman, G",dias:[0,3]},
+    {mat:"GGF",prof:"Lamique, Juan",dias:[0,3]},
+    {mat:"PLG",prof:"Giles, A",dias:[0,1,2,3]},
+    {mat:"MTM",prof:"Castro, Romina",dias:[1,2,4]},
+    {mat:"BLG",prof:"Viera, J",dias:[1,4]},
+    {mat:"CCD",prof:"Aspiroz, J",dias:[1,3]},
+    {mat:"AMC",prof:"Zarate",dias:[1,3]},
+    {mat:"HTR",prof:"Migoni/Sanchez",dias:[2,4]},
+  ],
+  "2° 2da": [
+    {mat:"IGS",prof:"Herboza/Simon",dias:[0,3]},
+    {mat:"MTM",prof:"Castro, Romina",dias:[0,1,4]},
+    {mat:"PLG",prof:"Ullman, Natalia",dias:[2,3,4]},
+    {mat:"CDC",prof:"Villa Abrille, C",dias:[1,3]},
+    {mat:"HTR",prof:"Castro M",dias:[0,3]},
+    {mat:"GGF",prof:"Granier, M",dias:[1,4]},
+    {mat:"FQA",prof:"Lurbe, L",dias:[2,3]},
+    {mat:"BLG",prof:"Sosa, Rocio",dias:[1,2]},
+    {mat:"AMC",prof:"Rincon/Mendizabal",dias:[1,2]},
+  ],
+  "2° 3ra": [
+    {mat:"GGF",prof:"Granier, Marcos",dias:[0,4]},
+    {mat:"FQA",prof:"Marcos, Mariana",dias:[1,2]},
+    {mat:"HTR",prof:"Bessa, F",dias:[0,2]},
+    {mat:"PLG",prof:"Giles, A",dias:[0,2,3,4]},
+    {mat:"CDC",prof:"Aspiroz, JM",dias:[1,3]},
+    {mat:"RTE",prof:"Sabadini, Mariana",dias:[2,3]},
+    {mat:"BLG",prof:"Viera, Joana",dias:[1,4]},
+    {mat:"IGS",prof:"Herbosa/Simon/Popp",dias:[0,4]},
+    {mat:"EFC",prof:"Romagnoli, W",dias:[1]},
+  ],
+  "3° 1ra": [
+    {mat:"PLG",prof:"Ayala",dias:[0,1,2,3]},
+    {mat:"MTM",prof:"Cortazar/Belacin",dias:[0,1,3]},
+    {mat:"FAQ",prof:"Perez, Marisa",dias:[1,4]},
+    {mat:"CDC",prof:"Guitlein/Garcia",dias:[1]},
+    {mat:"HTR",prof:"Sanchez, Cecilia",dias:[2,4]},
+    {mat:"BLG",prof:"Lopez, Mercedes",dias:[0,1]},
+    {mat:"IGS",prof:"Simon/Popp",dias:[2,4]},
+    {mat:"AMC",prof:"Fuentes/Maneiro",dias:[0,1]},
+    {mat:"GGF",prof:"Fondeville, Luz",dias:[3,4]},
+  ],
+  "3° 2da": [
+    {mat:"BLG",prof:"Lopez Mercedes",dias:[0,2]},
+    {mat:"PLG",prof:"Belacin/Giles",dias:[1,3,4]},
+    {mat:"MTM",prof:"Castro, Romina",dias:[2,3,4]},
+    {mat:"IGS",prof:"Herbosa/Popp",dias:[1,3]},
+    {mat:"GGF",prof:"Gianotti, Maria J",dias:[0,2]},
+    {mat:"HTR",prof:"Castellano, Agustina",dias:[1,4]},
+    {mat:"FQA",prof:"Lurbe Luz",dias:[2,3]},
+    {mat:"CDC",prof:"Guitlein, Daiana",dias:[1,2]},
+    {mat:"MUSICA",prof:"Rincon/Rosario",dias:[0,2]},
+  ],
+  "3° 3ra": [
+    {mat:"IGS",prof:"Baños/Popp",dias:[0,2]},
+    {mat:"HTR",prof:"Sanchez Cecilia",dias:[1,4]},
+    {mat:"PLG",prof:"Ayala, Lorena",dias:[0,1,2,3]},
+    {mat:"FAQ",prof:"Perez, Marisa",dias:[3,4]},
+    {mat:"MTM",prof:"Ledesma Romina",dias:[0,3,4]},
+    {mat:"GGF",prof:"Gianotti, Maria J",dias:[1,4]},
+    {mat:"CDC",prof:"Guitlein, D",dias:[2,3]},
+    {mat:"AMC",prof:"Piano, Ana",dias:[1,2]},
+    {mat:"BLG",prof:"Elortegui/Milo",dias:[3,4]},
+  ],
+};
+
+const horariosManana = {
+  "4° 1ra Nat": [
+    {mat:"NTICX",prof:"Olhasso/Irastorza",dias:[0,4]},
+    {mat:"IAQ",prof:"Lurbe, Luz",dias:[1,2]},
+    {mat:"MCS",prof:"Castro, Romina",dias:[2,3,4]},
+    {mat:"IAF",prof:"Perez, Marisa",dias:[0,3]},
+    {mat:"IGS",prof:"Cristobal, D",dias:[0,1]},
+    {mat:"LIT",prof:"Ayala, Lorena",dias:[1,3]},
+    {mat:"BLG",prof:"Elortegui, J",dias:[0,2]},
+    {mat:"HTR",prof:"Rodriguez/Sanchez",dias:[1,3]},
+    {mat:"GGF",prof:"Gianotti, Maria J",dias:[2,4]},
+    {mat:"SYA",prof:"Elortegui/Viera",dias:[3,4]},
+  ],
+  "4° 2da Nat": [
+    {mat:"GGF",prof:"Gianotti, M",dias:[0,4]},
+    {mat:"SYA",prof:"Olhasso, Julieta",dias:[1,3]},
+    {mat:"IAQ",prof:"Herbosa, Belen",dias:[2,3]},
+    {mat:"IAF",prof:"Lopez/Suasnabar",dias:[3,4]},
+    {mat:"MCS",prof:"Pavon, Valeria",dias:[0,1,2]},
+    {mat:"LIT",prof:"Luna, Silvia",dias:[2,3]},
+    {mat:"NTICX",prof:"Olhasso/Irastorza",dias:[0,4]},
+    {mat:"HTR",prof:"Rodriguez/Lamique",dias:[2,4]},
+    {mat:"IGS",prof:"Simon/Guzman",dias:[1,2]},
+    {mat:"BLG",prof:"Elortegui/Lopez",dias:[1,2]},
+  ],
+  "5° 1ra Nat": [
+    {mat:"FIS",prof:"Risso, Luis",dias:[0,3]},
+    {mat:"LIT",prof:"Luna, Silvia",dias:[1,2]},
+    {mat:"CDT",prof:"Urban/Zurita",dias:[2,4]},
+    {mat:"IGS",prof:"Simon/Guzman",dias:[0,3]},
+    {mat:"MCS",prof:"Irigoyen, F",dias:[2,4]},
+    {mat:"GGF",prof:"Gianotti, Maria J",dias:[0,2]},
+    {mat:"PYC",prof:"Castro, Mariana",dias:[0,1]},
+    {mat:"BLG",prof:"Urban/Lopez",dias:[1,3]},
+    {mat:"FAQ",prof:"Herbosa, Belen",dias:[2,3,4]},
+    {mat:"HTR",prof:"Migoni/Rivarola",dias:[3,4]},
+    {mat:"RTE",prof:"Diaz/Cruz",dias:[1,4]},
+  ],
+  "5° 2da Nat": [
+    {mat:"LIT",prof:"Luna, Silvia",dias:[0,4]},
+    {mat:"GGF",prof:"Gianotti, M",dias:[1,2]},
+    {mat:"PYC",prof:"Villa Abrille, C",dias:[2,3]},
+    {mat:"HTR",prof:"Sosa, Cristian",dias:[1,4]},
+    {mat:"FQA",prof:"Herbosa, Belen",dias:[0,1,2]},
+    {mat:"BLG",prof:"Montero/Elortegui",dias:[0,1]},
+    {mat:"CDT",prof:"Olhasso, Julieta",dias:[0,3]},
+    {mat:"RTE",prof:"Mousist, G",dias:[2,3]},
+    {mat:"FIS",prof:"Risso/Vidal",dias:[0,3,4]},
+    {mat:"MCS",prof:"Castro, Romina",dias:[2,3,4]},
+    {mat:"IGS",prof:"Simon/Lima",dias:[1,3]},
+  ],
+  "6° 1ra Nat": [
+    {mat:"MCS",prof:"Perez, Marisa",dias:[0,1,4]},
+    {mat:"BGS",prof:"Olhasso, Julieta",dias:[0,1,2]},
+    {mat:"FCM",prof:"Sentenac/Risso/Vidal",dias:[1,3]},
+    {mat:"FCYT",prof:"Herbosa, Belen",dias:[3,4]},
+    {mat:"QDC",prof:"Montero/Herbosa",dias:[1,2,4]},
+    {mat:"IGS",prof:"Guzman, Gimena",dias:[2,3]},
+    {mat:"LIT",prof:"Belacin, Mariangeles",dias:[0,2,4]},
+    {mat:"TYC",prof:"Barrera/Rivarola",dias:[1,4]},
+    {mat:"ADS",prof:"Montero/Sosa",dias:[2,3]},
+  ],
+  "6° 3ra Nat": [
+    {mat:"FCM",prof:"Sentenac/Risso/Vidal",dias:[0,1,4]},
+    {mat:"ADS",prof:"Perez, Marisa",dias:[2,3]},
+    {mat:"MCS",prof:"Sentenac/Masson",dias:[2,3,4]},
+    {mat:"IGS",prof:"Baños/Cristobal",dias:[0,4]},
+    {mat:"LIT",prof:"Belacin, Mariangeles",dias:[0,1,3]},
+    {mat:"BGS",prof:"Urban/Zurita",dias:[1,2,4]},
+    {mat:"QDC",prof:"Montero/Lurbe",dias:[0,2,3]},
+    {mat:"FHCYT",prof:"Herbosa, Belen",dias:[1,2]},
+    {mat:"TYC",prof:"Aguirre/Rivarola",dias:[2,3]},
+  ],
+  "4° 1ra Econ": [
+    {mat:"SIC I",prof:"Cedergren, E",dias:[0,3]},
+    {mat:"SYA",prof:"Zurita, Maria",dias:[1,2]},
+    {mat:"TDO",prof:"Cincunegui/Cedergren",dias:[0,2]},
+    {mat:"BLG",prof:"Elortegui, Julieta",dias:[3,4]},
+    {mat:"MCS",prof:"Irigoyen, Fabricio",dias:[1,2,4]},
+    {mat:"LIT",prof:"Giles, Andrea",dias:[0,1,2]},
+    {mat:"GGF",prof:"Gianotti, Maria J",dias:[1,2]},
+    {mat:"IGS",prof:"Simon/Guzman",dias:[0,1,3]},
+    {mat:"NTICX",prof:"Olhasso/Irastorza",dias:[0,4]},
+    {mat:"IAF",prof:"Perez, Marisa",dias:[3,4]},
+    {mat:"HTR",prof:"Navarro, Angelina",dias:[3,4]},
+  ],
+  "4° 2da Econ": [
+    {mat:"MCS",prof:"Irigoyen, Fabricio",dias:[0,2,4]},
+    {mat:"BLG",prof:"Elortegui, Julieta",dias:[1,3]},
+    {mat:"HTR",prof:"Rodriguez/Sanchez",dias:[2,4]},
+    {mat:"GGF",prof:"Gianotti, Maria J",dias:[0,1]},
+    {mat:"NTICX",prof:"Olhasso/Irastorza",dias:[0,4]},
+    {mat:"LIT",prof:"Giles, Andrea",dias:[1,2,3]},
+    {mat:"SIC I",prof:"Cedergren, E",dias:[0,2]},
+    {mat:"SYA",prof:"Elortegui/Zurita",dias:[2,3]},
+    {mat:"IGS",prof:"Cristobal, Daiana",dias:[0,4]},
+    {mat:"TDO",prof:"Cincunegui/Cedergren",dias:[3,4]},
+    {mat:"IAF",prof:"Suasnabar, Sofia",dias:[1,2]},
+  ],
+  "5° 1ra Econ": [
+    {mat:"GGF",prof:"Granier, Marcos",dias:[0,1]},
+    {mat:"PYC",prof:"Sosa, Cristian",dias:[1,3]},
+    {mat:"EMM",prof:"Gonzalez/Cincunegui",dias:[0,2,4]},
+    {mat:"IAQ",prof:"Herbosa, Belen",dias:[0,3]},
+    {mat:"IGS",prof:"Simon/Guzman",dias:[0,3,4]},
+    {mat:"MCS",prof:"Irigoyen, Fabricio",dias:[0,2,4]},
+    {mat:"SIC II",prof:"Cedergren, Evangelina",dias:[1,2,3]},
+    {mat:"GOR",prof:"Gonzalez/Cedergren",dias:[0,2]},
+    {mat:"LIT",prof:"Ayala, Lorena",dias:[1,2]},
+    {mat:"HTR",prof:"Rivarola, Nicolas",dias:[0,3]},
+    {mat:"DER",prof:"Gavio, Camila",dias:[3,4]},
+  ],
+  "5° 2da Econ": [
+    {mat:"EMM",prof:"Cincunegui/Gonzalez",dias:[0,2]},
+    {mat:"IAQ",prof:"Herbosa, Belen",dias:[0,1,3]},
+    {mat:"MCS",prof:"Irigoyen, Fabricio",dias:[0,2,3]},
+    {mat:"IGS",prof:"Simon/Guzman",dias:[0,1]},
+    {mat:"GGF",prof:"Granier, Marcos",dias:[0,4]},
+    {mat:"GOD",prof:"Sabadin/Cedergren",dias:[1,2]},
+    {mat:"LIT",prof:"Luna, Silvia",dias:[2,3]},
+    {mat:"HTR",prof:"Sosa, Cristian",dias:[0,3,4]},
+    {mat:"SIC II",prof:"Suarez, Eugenia",dias:[1,2,4]},
+    {mat:"DER",prof:"Gavio, Camila",dias:[0,3,4]},
+    {mat:"PYC",prof:"Gavio, Camila",dias:[2,4]},
+  ],
+  "6° 1ra Econ": [
+    {mat:"TYC",prof:"Gavio, Camila",dias:[0,3]},
+    {mat:"PRO",prof:"Barrera/Vouillat",dias:[0,1,4]},
+    {mat:"LIT",prof:"Luna, Silvia",dias:[0,2,4]},
+    {mat:"RTE",prof:"Mousist/Guevara",dias:[1,2]},
+    {mat:"FIA",prof:"Wagner, Carolina",dias:[1,3]},
+    {mat:"EPO",prof:"Gonzalez/Cincunegui",dias:[0,3,4]},
+    {mat:"IGS",prof:"Guzman, Gimena",dias:[0,2]},
+    {mat:"MCS",prof:"Loholaberry/Belacin",dias:[1,2,3]},
+  ],
+  "4° 1ra EDFI": [
+    {mat:"EDUC FIS",prof:"Romagnoli, W",dias:[0,4]},
+    {mat:"HTR",prof:"Lamique, Juan",dias:[1,2]},
+    {mat:"BLG",prof:"Olhasso, Julieta",dias:[3,4]},
+    {mat:"PSIC",prof:"Aguirre/Leuful",dias:[0,2]},
+    {mat:"MCS",prof:"Cortazar/Ledesma",dias:[1,3]},
+    {mat:"GGF",prof:"Gianotti, Maria J",dias:[0,1]},
+    {mat:"IAF",prof:"Perez, Marisa",dias:[0,2]},
+    {mat:"SYA",prof:"Elortegui/Sosa",dias:[2,3]},
+    {mat:"IGS",prof:"Cristobal, Daiana",dias:[2,4]},
+    {mat:"LIT",prof:"Luna, Silvia",dias:[0,1,2]},
+    {mat:"NTICX",prof:"Castro, Manuel",dias:[2,4]},
+  ],
+  "5° 1ra EDFI": [
+    {mat:"PYC",prof:"Villa Abrille, Cintia",dias:[0,1]},
+    {mat:"MCS",prof:"Castro, Romina",dias:[0,2,3]},
+    {mat:"IAQ",prof:"Montero/Lurbe",dias:[0,2]},
+    {mat:"HTR",prof:"Sosa, Cristian",dias:[1,3]},
+    {mat:"LIT",prof:"Belacin, Mariangeles",dias:[0,4]},
+    {mat:"GGF",prof:"Granier, Marcos",dias:[1,2]},
+    {mat:"IGS",prof:"Cristobal, Daiana",dias:[2,3]},
+    {mat:"SOC",prof:"Castellano, Agustina",dias:[3,4]},
+    {mat:"EFI",prof:"Burgois, Javier",dias:[2,3]},
+  ],
+  "6° 1ra EDFI": [
+    {mat:"RTE",prof:"Piano, Ana Luz",dias:[0,4]},
+    {mat:"TYC",prof:"Villa Abrille, C",dias:[0,4]},
+    {mat:"DIS",prof:"Sibilio, Sofia",dias:[1,2,3,4]},
+    {mat:"LIT",prof:"Belacin, Mariangeles",dias:[1,2,4]},
+    {mat:"IGS",prof:"Cristobal",dias:[2,3]},
+    {mat:"MCS",prof:"Irigoyen, F",dias:[0,3,4]},
+    {mat:"FIA",prof:"Wagner, Carolina",dias:[2,3]},
+    {mat:"ED FIS",prof:"Guitlein",dias:[0,1]},
+  ],
+};
+
+// ══════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════
+let currentView = 'registro';
+let turno = 'tarde';
+let allData = {};
+let sessionAbs = {};
+let filtroMes = 'todos';
+let filtroTurnoStats = 'todos';
+
+// ══════════════════════════════════════════
+// NPOINT API
+// ══════════════════════════════════════════
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot' + (s==='syncing'?' syncing':s==='error'?' error':'');
+}
+
+async function loadData() {
+  try {
+    setSyncStatus('syncing');
+    const r = await fetch(API_URL);
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    allData = await r.json();
+    setSyncStatus('ok');
+    localStorage.setItem('ees1_backup', JSON.stringify(allData));
+  } catch(e) {
+    setSyncStatus('error');
+    allData = JSON.parse(localStorage.getItem('ees1_backup') || '{}');
+    showToast('Sin conexión. Usando datos locales.');
+  }
+}
+
+async function saveData() {
+  localStorage.setItem('ees1_backup', JSON.stringify(allData));
+  try {
+    setSyncStatus('syncing');
+    // Leer datos frescos antes de guardar (evita que un preceptor pise al otro)
+    try {
+      const rFresh = await fetch(API_URL);
+      if (rFresh.ok) {
+        const fresh = await rFresh.json();
+        allData = Object.assign({}, fresh, allData);
+        localStorage.setItem('ees1_backup', JSON.stringify(allData));
+      }
+    } catch(e2) {}
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(allData)
+    });
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    setSyncStatus('ok');
+  } catch(e) {
+    setSyncStatus('error');
+    showToast('Error al sincronizar. Guardado localmente.');
+  }
+}
+
+// ══════════════════════════════════════════
+// NAVEGACIÓN
+// ══════════════════════════════════════════
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['registro','stats'][i]===v));
+  document.getElementById('header-controls').style.display = v==='registro' ? '' : 'none';
+  document.getElementById('bottom-bar').style.display = v==='registro' ? 'flex' : 'none';
+  if (v==='registro') renderDivList();
+  else renderStats();
+}
+
+function setTurno(t) {
+  turno = t;
+  document.getElementById('tt-tarde').classList.toggle('active', t==='tarde');
+  document.getElementById('tt-manana').classList.toggle('active', t==='manana');
+  renderDivList();
+}
+
+// ══════════════════════════════════════════
+// VISTA REGISTRO
+// ══════════════════════════════════════════
+function getDiaSemana(dateStr) {
+  const [y,m,d] = dateStr.split('-').map(Number);
+  return new Date(y,m-1,d).getDay();
+}
+
+function renderDivList() {
+  const fecha = document.getElementById('fecha').value;
+  const content = document.getElementById('content');
+  document.getElementById('bottom-bar').style.display = 'flex';
+  if (!fecha) { content.innerHTML='<div class="empty"><div class="empty-icon">📅</div>Seleccioná una fecha</div>'; return; }
+  const diaSem = getDiaSemana(fecha);
+  if (diaSem===0||diaSem===6) { content.innerHTML='<div class="empty"><div class="empty-icon">🏖️</div>No hay clases los fines de semana</div>'; document.getElementById('bottom-bar').style.display='none'; return; }
+  const diaIdx = diaSem - 1;
+  const horarios = turno==='tarde' ? horariosTarde : horariosManana;
+  const key = `${fecha}_${turno}`;
+  if (!sessionAbs[key]) sessionAbs[key] = {...(allData[key]||{})};
+
+  let html = `<div class="section-label">${DIAS[diaSem]} ${fecha.split('-').reverse().join('/')} — ${turno==='tarde'?'Turno tarde (Básica)':'Turno mañana (Superior)'}</div><div class="div-list">`;
+  Object.entries(horarios).forEach(([div, profs]) => {
+    const hoy = profs.filter(p => p.dias.includes(diaIdx));
+    if (!hoy.length) return;
+    const absCount = hoy.filter(p => sessionAbs[key]?.[div+'|'+p.prof+'|'+p.mat]).length;
+    const divId = 'div_'+encodeURIComponent(div).replace(/%/g,'_');
+    html += `<div class="div-card">
+      <div class="div-header" onclick="toggleDiv('${divId}')">
+        <div class="div-name">${div}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="abs-pill ${absCount>0?'has-abs':''}" id="pill_${divId}">✗ ${absCount} ausente${absCount!==1?'s':''}</span>
+          <span class="chevron-icon" id="chev_${divId}">▼</span>
+        </div>
+      </div>
+      <div class="div-body" id="body_${divId}">`;
+    hoy.forEach(p => {
+      const pkey = `${div}|${p.prof}|${p.mat}`;
+      const ausente = !!(sessionAbs[key]?.[pkey]);
+      const bid = 'b_'+Math.abs(pkey.split('').reduce((a,c)=>((a<<5)-a)+c.charCodeAt(0),0)).toString(36)+'_'+divId;
+      html += `<div class="prof-row">
+        <div class="prof-info">
+          <div class="prof-name">${p.prof}</div>
+          <div class="prof-mat">${p.mat}</div>
+        </div>
+        <button class="toggle-btn ${ausente?'ausente':'presente'}" id="${bid}"
+          data-key="${key}" data-div="${encodeURIComponent(div)}" data-prof="${encodeURIComponent(p.prof)}" data-mat="${encodeURIComponent(p.mat)}" data-divid="${divId}"
+          onclick="toggleProf(this)">${ausente?'✗':'✓'}</button>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+function toggleDiv(id) {
+  document.getElementById('body_'+id)?.classList.toggle('open');
+  document.getElementById('chev_'+id)?.classList.toggle('open');
+}
+
+function toggleProf(btn) {
+  const key = btn.dataset.key;
+  const div = decodeURIComponent(btn.dataset.div);
+  const prof = decodeURIComponent(btn.dataset.prof);
+  const mat = decodeURIComponent(btn.dataset.mat);
+  const divId = btn.dataset.divid;
+  const btnId = btn.id;
+  if (!sessionAbs[key]) sessionAbs[key] = {};
+  const pkey = `${div}|${prof}|${mat}`;
+  if (sessionAbs[key][pkey]) {
+    delete sessionAbs[key][pkey];
+  } else {
+    sessionAbs[key][pkey] = true;
+  }
+  const ausente = !!(sessionAbs[key][pkey]);
+  btn.className='toggle-btn '+(ausente?'ausente':'presente'); btn.textContent=ausente?'✗':'✓';
+  const fecha = document.getElementById('fecha').value;
+  const diaIdx = getDiaSemana(fecha)-1;
+  const horarios = turno==='tarde'?horariosTarde:horariosManana;
+  const hoy = (horarios[div]||[]).filter(p=>p.dias.includes(diaIdx));
+  const absCount = hoy.filter(p=>sessionAbs[key]?.[div+'|'+p.prof+'|'+p.mat]).length;
+  const pill = document.getElementById('pill_'+divId);
+  if (pill) { pill.className='abs-pill '+(absCount>0?'has-abs':''); pill.textContent=`✗ ${absCount} ausente${absCount!==1?'s':''}`; }
+}
+
+function guardar() {
+  const fecha = document.getElementById('fecha').value;
+  const key = `${fecha}_${turno}`;
+  const limpio = {};
+  Object.entries(sessionAbs[key]||{}).forEach(([k,v]) => { if(v) limpio[k] = true; });
+  allData[key] = limpio;
+  saveData();
+  showToast('Parte guardado ✓');
+}
+
+function cancelar() {
+  const fecha = document.getElementById('fecha').value;
+  const key = `${fecha}_${turno}`;
+  sessionAbs[key] = {...(allData[key]||{})};
+  renderDivList();
+}
+
+// ══════════════════════════════════════════
+// VISTA ESTADÍSTICAS
+// ══════════════════════════════════════════
+function getMeses() {
+  const meses = new Set();
+  Object.keys(allData).forEach(k => { const f=k.split('_')[0]; if(f) meses.add(f.slice(0,7)); });
+  return [...meses].sort().reverse();
+}
+
+function renderStats() {
+  const meses = getMeses();
+  let conteo = {}, totalAbs = 0, diasSet = new Set();
+
+  Object.entries(allData).forEach(([key, abs]) => {
+    const parts = key.split('_');
+    const fecha = parts[0], t = parts[1];
+    if (!fecha||!abs) return;
+    if (filtroTurnoStats!=='todos' && t!==filtroTurnoStats) return;
+    if (filtroMes!=='todos' && !fecha.startsWith(filtroMes)) return;
+    const absTrue = Object.entries(abs).filter(([,v])=>v);
+    if (!absTrue.length) return;
+    diasSet.add(fecha);
+    absTrue.forEach(([pkey]) => {
+      const name = pkey.split('|')[1];
+      conteo[name] = (conteo[name]||0) + 1;
+      totalAbs++;
+    });
+  });
+
+  const sorted = Object.entries(conteo).sort((a,b)=>b[1]-a[1]);
+  const mesLabel = filtroMes==='todos' ? 'todos los meses' : (() => { const [y,m]=filtroMes.split('-'); return `${MESES[parseInt(m)-1]} ${y}`; })();
+
+  let html = '';
+  // Filtro turno
+  html += `<div class="turno-filter">
+    <button class="mes-btn ${filtroTurnoStats==='todos'?'active':''}" onclick="setFT('todos')">Ambos turnos</button>
+    <button class="mes-btn ${filtroTurnoStats==='tarde'?'active':''}" onclick="setFT('tarde')">Tarde</button>
+    <button class="mes-btn ${filtroTurnoStats==='manana'?'active':''}" onclick="setFT('manana')">Mañana</button>
+  </div>`;
+  // Filtro mes
+  html += `<div class="mes-filter"><button class="mes-btn ${filtroMes==='todos'?'active':''}" onclick="setFM('todos')">Todos</button>`;
+  meses.forEach(m => {
+    const [y,mo] = m.split('-');
+    html += `<button class="mes-btn ${filtroMes===m?'active':''}" onclick="setFM('${m}')">${MESES[parseInt(mo)-1].slice(0,3)} ${y}</button>`;
+  });
+  html += `</div>`;
+  // Cards
+  html += `<div class="stats-grid">
+    <div class="stat-card"><div class="stat-num">${totalAbs}</div><div class="stat-lbl">Inasistencias</div></div>
+    <div class="stat-card"><div class="stat-num">${diasSet.size}</div><div class="stat-lbl">Días registrados</div></div>
+    <div class="stat-card"><div class="stat-num">${sorted.length}</div><div class="stat-lbl">Docentes con faltas</div></div>
+    <div class="stat-card"><div class="stat-num">${diasSet.size?Math.round(totalAbs/diasSet.size*10)/10:0}</div><div class="stat-lbl">Promedio/día</div></div>
+  </div>`;
+  html += `<div class="section-label">Ranking — ${mesLabel}</div>`;
+  if (!sorted.length) {
+    html += `<div class="empty"><div class="empty-icon">🎉</div>Sin inasistencias registradas</div>`;
+  } else {
+    html += `<div class="ranking">`;
+    sorted.forEach(([prof,total],i) => {
+      html += `<div class="rank-row">
+        <div class="rank-pos ${i<3?'top':''}">${i+1}</div>
+        <div class="rank-name">${prof}</div>
+        <div class="rank-badges"><span class="badge-total">${total} falta${total!==1?'s':''}</span></div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  document.getElementById('content').innerHTML = html;
+}
+
+function setFM(m) { filtroMes=m; renderStats(); }
+function setFT(t) { filtroTurnoStats=t; renderStats(); }
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function init() {
+  const now = new Date();
+  const localDate = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  document.getElementById('fecha').value = localDate;
+  await loadData();
+  renderDivList();
+}
+init();
+</script>
+</body>
+</html>
